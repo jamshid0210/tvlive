@@ -5,7 +5,6 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-  # Qo'lda ham ishga tushirish mumkin
   workflow_dispatch:
 
 jobs:
@@ -13,11 +12,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Kodni olish
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. JDK 17 o'rnatish (Android Gradle 8+ uchun kerak)
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -25,15 +22,21 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # 3. gradlew ga ruxsat berish
+      - name: Download Gradle wrapper jar
+        run: |
+          mkdir -p gradle/wrapper
+          curl -L "https://github.com/gradle/gradle/raw/v8.9.0/gradle/wrapper/gradle-wrapper.jar" \
+            -o gradle/wrapper/gradle-wrapper.jar || \
+          wget -q "https://raw.githubusercontent.com/gradle/gradle/v8.9.0/gradle/wrapper/gradle-wrapper.jar" \
+            -O gradle/wrapper/gradle-wrapper.jar
+          ls -la gradle/wrapper/
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # 4. Faqat debug APK build qilish (tez, sign shart emas)
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      # 5. APK ni artifact sifatida saqlash (yuklab olish uchun)
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
