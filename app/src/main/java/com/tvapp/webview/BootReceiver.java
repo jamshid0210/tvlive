@@ -10,17 +10,14 @@ public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
+        if (action == null) return;
 
-        if (Intent.ACTION_BOOT_COMPLETED.equals(action) ||
-            "android.intent.action.LOCKED_BOOT_COMPLETED".equals(action) ||
-            "android.intent.action.QUICKBOOT_POWERON".equals(action)) {
+        if (action.equals(Intent.ACTION_BOOT_COMPLETED) ||
+            action.equals("android.intent.action.LOCKED_BOOT_COMPLETED") ||
+            action.equals("android.intent.action.QUICKBOOT_POWERON")) {
 
-            // Android 10+ da background dan Activity ochib bo'lmaydi
-            // ForegroundService orqali ochamiz
             Intent serviceIntent = new Intent(context, LaunchService.class);
-
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                // Android 8+ da startForegroundService
                 context.startForegroundService(serviceIntent);
             } else {
                 context.startService(serviceIntent);

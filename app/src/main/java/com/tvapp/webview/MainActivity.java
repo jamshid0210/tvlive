@@ -25,6 +25,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
@@ -33,6 +34,7 @@ public class MainActivity extends Activity {
     private static final String KEY_PERM_ASKED  = "perm_asked";
     private static final int    REQ_BATTERY     = 101;
     private static final int    REQ_OVERLAY     = 102;
+    private long backPressedTime = 0;
 
     private WebView     webView;
     private ProgressBar progressBar;
@@ -263,20 +265,53 @@ public class MainActivity extends Activity {
     }
 
     // ─── TV pult ─────────────────────────────────────────────────────────────
+    // Setup ekranida: orqaga = dasturdan chiqish
+    // WebView da: orqaga = tarixda orqaga (chiqmaslik)
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (webviewScreen.getVisibility() == View.VISIBLE) {
-            if (keyCode == KeyEvent.KEYCODE_BACK) {
-                if (webView.canGoBack()) webView.goBack();
-                return true;
+
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+
+            if (setupScreen.getVisibility() == View.VISIBLE) {
+                // URL ekranida — ikki marta bosish kerak
+                if (doubleBackToExit()) return true;
             }
-            if (keyCode == KeyEvent.KEYCODE_F5 || keyCode == KeyEvent.KEYCODE_REFRESH) {
+
+            if (webviewScreen.getVisibility() == View.VISIBLE) {
+                if (webView.canGoBack()) {
+                    // Tarix bor — orqaga
+                    webView.goBack();
+                    return true;
+                }
+                // Tarix yo'q — ikki marta bosish kerak
+                if (doubleBackToExit()) return true;
+            }
+        }
+
+        if (keyCode == KeyEvent.KEYCODE_F5 || keyCode == KeyEvent.KEYCODE_REFRESH) {
+            if (webviewScreen.getVisibility() == View.VISIBLE) {
                 webView.reload();
                 return true;
             }
         }
+
         return super.onKeyDown(keyCode, event);
+    }
+
+    // Ikki marta bosish — chiqish
+    // true = birinchi bosish (toast chiqdi), false = ikkinchi bosish (chiqish)
+    private boolean doubleBackToExit() {
+        long now = System.currentTimeMillis();
+        if (now - backPressedTime < 2000) {
+            // 2 soniya ichida ikkinchi marta — chiqish
+            finish();
+            return false;
+        }
+        // Birinchi marta — ogohlantirish
+        backPressedTime = now;
+        Toast.makeText(this, "Chiqish uchun yana bir marta bosing", Toast.LENGTH_SHORT).show();
+        return true;
     }
 
     @Override protected void onResume()  { super.onResume();  if (webView != null) webView.onResume(); }

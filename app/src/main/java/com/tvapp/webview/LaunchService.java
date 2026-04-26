@@ -17,7 +17,6 @@ public class LaunchService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        // Android 8+ da ForegroundService notification kerak
         createNotificationChannel();
         Notification notification = new Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("TV WebApp")
@@ -27,14 +26,17 @@ public class LaunchService extends Service {
 
         startForeground(1, notification);
 
-        // 5 soniya kutib Activity ochamiz
+        // intentdan delay olish (boot=5000, screen_on=1000)
+        long delay = intent != null ? intent.getLongExtra("delay", 3000) : 3000;
+
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             Intent launchIntent = new Intent(this, MainActivity.class);
             launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
             startActivity(launchIntent);
-            stopSelf(); // Service ni yopamiz
-        }, 5000);
+            stopSelf();
+        }, delay);
 
         return START_NOT_STICKY;
     }
@@ -47,14 +49,10 @@ public class LaunchService extends Service {
                 NotificationManager.IMPORTANCE_LOW
             );
             NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(channel);
-            }
+            if (manager != null) manager.createNotificationChannel(channel);
         }
     }
 
     @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
+    public IBinder onBind(Intent intent) { return null; }
 }
