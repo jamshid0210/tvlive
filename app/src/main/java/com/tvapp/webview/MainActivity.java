@@ -3,9 +3,13 @@ package com.tvapp.webview;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
-import android.content.SharedPreferences;
+import android.content.Intent;
 import android.graphics.Bitmap;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.View;
@@ -24,8 +28,11 @@ import android.widget.TextView;
 
 public class MainActivity extends Activity {
 
-    private static final String PREFS_NAME = "TVWebAppPrefs";
-    private static final String KEY_URL    = "saved_url";
+    private static final String PREFS_NAME      = "TVWebAppPrefs";
+    private static final String KEY_URL         = "saved_url";
+    private static final String KEY_PERM_ASKED  = "perm_asked";
+    private static final int    REQ_BATTERY     = 101;
+    private static final int    REQ_OVERLAY     = 102;
 
     private WebView     webView;
     private ProgressBar progressBar;
@@ -37,7 +44,6 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // To'liq ekran
         getWindow().setFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN,
             WindowManager.LayoutParams.FLAG_FULLSCREEN
@@ -59,8 +65,82 @@ public class MainActivity extends Activity {
         progressBar   = findViewById(R.id.progressBar);
         urlInput      = findViewById(R.id.url_input);
 
-        String savedUrl = getSavedUrl();
+        // Ruxsatlar so'rash zanjiri boshlaydi
+        askPermissions();
+    }
 
+    // ─── Ruxsatlar zanjiri ───────────────────────────────────────────────────
+    // 1. Battery optimization → 2. Overlay → 3. Dastur
+
+    private void askPermissions() {
+        boolean alreadyAsked = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean(KEY_PERM_ASKED, false);
+
+        if (alreadyAsked) {
+            // Ruxsatlar avval so'ralgan — to'g'ri dasturga o'tamiz
+            proceedToApp();
+            return;
+        }
+
+        // Birinchi marta — battery ruxsat so'raymiz
+        askBatteryPermission();
+    }
+
+    // 1-qadam: Battery optimization
+    private void askBatteryPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+                startActivityForResult(intent, REQ_BATTERY);
+                return; // onActivityResult → askOverlayPermission
+            }
+        }
+        // Battery ruxsat kerak emas yoki allaqachon berilgan
+        askOverlayPermission();
+    }
+
+    // 2-qadam: Overlay (ustidan ochilish)
+    private void askOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.canDrawOverlays(this)) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+                startActivityForResult(intent, REQ_OVERLAY);
+                return; // onActivityResult → proceedToApp
+            }
+        }
+        // Overlay ruxsat kerak emas yoki allaqachon berilgan
+        finishPermissions();
+    }
+
+    // 3-qadam: Ruxsatlar tugadi
+    private void finishPermissions() {
+        // Keyingi ochilganda so'ralmasin
+        getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_PERM_ASKED, true).apply();
+        proceedToApp();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == REQ_BATTERY) {
+            // Battery — Allow yoki Deny, farqi yo'q — overlay ga o'tamiz
+            askOverlayPermission();
+
+        } else if (requestCode == REQ_OVERLAY) {
+            // Overlay — Allow yoki Deny, farqi yo'q — davom etamiz
+            finishPermissions();
+        }
+    }
+
+    // ─── Ruxsatdan keyin — URL yoki WebView ──────────────────────────────────
+
+    private void proceedToApp() {
+        String savedUrl = getSavedUrl();
         if (TextUtils.isEmpty(savedUrl)) {
             showSetupScreen();
         } else {
@@ -86,7 +166,6 @@ public class MainActivity extends Activity {
                 return;
             }
 
-            // https:// yo'q bo'lsa qo'shamiz
             if (!url.startsWith("http://") && !url.startsWith("https://")) {
                 url = "https://" + url;
             }
@@ -96,7 +175,6 @@ public class MainActivity extends Activity {
             showWebView(url);
         });
 
-        // Enter bosilganda saqlash
         urlInput.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_GO ||
                 actionId == EditorInfo.IME_ACTION_DONE) {
@@ -106,14 +184,11 @@ public class MainActivity extends Activity {
             return false;
         });
 
-        // Klaviaturani ko'rsat
         urlInput.requestFocus();
         urlInput.postDelayed(() -> {
             InputMethodManager imm = (InputMethodManager)
                 getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null) {
-                imm.showSoftInput(urlInput, InputMethodManager.SHOW_IMPLICIT);
-            }
+            if (imm != null) imm.showSoftInput(urlInput, InputMethodManager.SHOW_IMPLICIT);
         }, 300);
     }
 
@@ -140,7 +215,7 @@ public class MainActivity extends Activity {
         s.setUseWideViewPort(true);
         s.setLoadWithOverviewMode(true);
         s.setUserAgentString(
-            "Mozilla/5.0 (Linux; Android 10; Smart TV) " +
+            "Mozilla/5.0 (Linux; Android 11; Smart TV) " +
             "AppleWebKit/537.36 (KHTML, like Gecko) " +
             "Chrome/91.0.4472.120 Safari/537.36 TVWebApp/1.0"
         );
@@ -187,14 +262,14 @@ public class MainActivity extends Activity {
             .getString(KEY_URL, "");
     }
 
-    // ─── TV pult tugmalari ────────────────────────────────────────────────────
+    // ─── TV pult ─────────────────────────────────────────────────────────────
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (webviewScreen.getVisibility() == View.VISIBLE) {
             if (keyCode == KeyEvent.KEYCODE_BACK) {
                 if (webView.canGoBack()) webView.goBack();
-                return true; // ilovadan chiqmaslik
+                return true;
             }
             if (keyCode == KeyEvent.KEYCODE_F5 || keyCode == KeyEvent.KEYCODE_REFRESH) {
                 webView.reload();

@@ -3,11 +3,8 @@ package com.tvapp.webview;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 
-/**
- * TV yonganida avtomatik ishga tushadigan Receiver
- * AndroidManifest da RECEIVE_BOOT_COMPLETED ruxsati kerak
- */
 public class BootReceiver extends BroadcastReceiver {
 
     @Override
@@ -15,20 +12,19 @@ public class BootReceiver extends BroadcastReceiver {
         String action = intent.getAction();
 
         if (Intent.ACTION_BOOT_COMPLETED.equals(action) ||
+            "android.intent.action.LOCKED_BOOT_COMPLETED".equals(action) ||
             "android.intent.action.QUICKBOOT_POWERON".equals(action)) {
 
-            // Kichik delay - tizim to'liq yuklanishini kutish (3 soniya)
-            try {
-                Thread.sleep(3000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            // Android 10+ da background dan Activity ochib bo'lmaydi
+            // ForegroundService orqali ochamiz
+            Intent serviceIntent = new Intent(context, LaunchService.class);
 
-            // MainActivity ni ishga tushirish
-            Intent launchIntent = new Intent(context, MainActivity.class);
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            context.startActivity(launchIntent);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Android 8+ da startForegroundService
+                context.startForegroundService(serviceIntent);
+            } else {
+                context.startService(serviceIntent);
+            }
         }
     }
 }
