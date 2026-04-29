@@ -41,6 +41,7 @@
             android:textColorHint="#555555"
             android:textSize="18sp"
             android:hint="https://example.com"
+            android:text="http://10.142.137.27/live/tv"
             android:inputType="textUri"
             android:imeOptions="actionGo"
             android:paddingStart="24dp"
