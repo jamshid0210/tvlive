@@ -226,8 +226,19 @@ public class MainActivity extends Activity {
         // Hardware acceleration — WebView darajasida
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
+        // Cache hajmini oshirish (100MB)
+        webView.setInitialScale(0);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Android 10+ — ServiceWorker cache orqali
+            android.webkit.ServiceWorkerController swController =
+                android.webkit.ServiceWorkerController.getInstance();
+            android.webkit.ServiceWorkerWebSettings swSettings =
+                swController.getServiceWorkerWebSettings();
+            swSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        }
+
         // Cache — video buffer uchun
-        s.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        s.setCacheMode(WebSettings.LOAD_DEFAULT);
 
         s.setUserAgentString(
             "Mozilla/5.0 (Linux; Android 11; Smart TV) " +
