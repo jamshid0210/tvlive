@@ -218,6 +218,19 @@ public class MainActivity extends Activity {
         s.setDisplayZoomControls(false);
         s.setUseWideViewPort(true);
         s.setLoadWithOverviewMode(true);
+
+        // Video uchun optimizatsiya
+        s.setMediaPlaybackRequiresUserGesture(false);
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+
+        // Hardware acceleration — WebView darajasida
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+
+        // Cache — video buffer uchun
+        s.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        s.setDatabaseEnabled(true);
+        s.setAppCacheEnabled(true);
+
         s.setUserAgentString(
             "Mozilla/5.0 (Linux; Android 11; Smart TV) " +
             "AppleWebKit/537.36 (KHTML, like Gecko) " +
