@@ -228,8 +228,6 @@ public class MainActivity extends Activity {
 
         // Cache — video buffer uchun
         s.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
-        s.setDatabaseEnabled(true);
-        s.setAppCacheEnabled(true);
 
         s.setUserAgentString(
             "Mozilla/5.0 (Linux; Android 11; Smart TV) " +
